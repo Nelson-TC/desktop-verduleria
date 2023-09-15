@@ -1,6 +1,7 @@
 package org.example.service;
 
 import okhttp3.*;
+import org.example.utils.SessionManager;
 
 import java.io.IOException;
 
@@ -15,6 +16,7 @@ public class ApiService {
 
         Request request = new Request.Builder()
                 .url(apiUrl)
+                .addHeader("Authorization", "Bearer " + SessionManager.getJwtToken())
                 .build();
 
         try (Response response = client.newCall(request).execute()) {
@@ -25,8 +27,7 @@ public class ApiService {
             }
         }
     }
-
-    public String doPostRequest(String endpoint, String jsonBody) throws IOException {
+    public String doUnauthorizedPostRequest(String endpoint, String jsonBody) throws IOException {
         String baseUrl = "http://localhost:8080/api/";
 
         String apiUrl = baseUrl + endpoint;
@@ -42,7 +43,28 @@ public class ApiService {
             if (response.isSuccessful()) {
                 return response.body().string();
             } else {
-                throw new IOException("Error en la solicitud HTTP. Código de respuesta: " + response.code());
+                throw new IOException("Error en la solicitud. Código del error: " + response.code());
+            }
+        }
+    }
+    public String doPostRequest(String endpoint, String jsonBody) throws IOException {
+        String baseUrl = "http://localhost:8080/api/";
+
+        String apiUrl = baseUrl + endpoint;
+
+        RequestBody requestBody = RequestBody.create(jsonBody, JSON);
+
+        Request request = new Request.Builder()
+                .url(apiUrl)
+                .addHeader("Authorization", "Bearer " + SessionManager.getJwtToken())
+                .post(requestBody)
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            if (response.isSuccessful()) {
+                return response.body().string();
+            } else {
+                throw new IOException("Error en la solicitud. Código del error: " + response.code());
             }
         }
     }
@@ -56,6 +78,7 @@ public class ApiService {
         RequestBody requestBody = RequestBody.create(jsonBody, JSON);
 
         Request request = new Request.Builder()
+                .addHeader("Authorization", "Bearer " + SessionManager.getJwtToken())
                 .url(apiUrl)
                 .put(requestBody)
                 .build();
@@ -75,6 +98,7 @@ public class ApiService {
         String apiUrl = baseUrl + endpoint;
 
         Request request = new Request.Builder()
+                .addHeader("Authorization", "Bearer " + SessionManager.getJwtToken())
                 .url(apiUrl)
                 .delete()
                 .build();

@@ -13,123 +13,57 @@ import javax.swing.event.DocumentListener;
 import java.io.IOException;
 
 public class ProductController {
-    private ProductView view;
-    private ProductService productService;
-    private CreateProductDialog createProductDialog;
-    private EditProductDialog editProductDialog;
+        private ProductService productService;
 
-    public ProductController(ProductView view) {
-        this.view = view;
+    public ProductController() {
         this.productService = new ProductService(new ApiService());
-        this.createProductDialog = new CreateProductDialog(view);
-        this.editProductDialog = new EditProductDialog(view);
-
-        view.getCreateProductButton().addActionListener(e -> createProduct());
-
-        view.getPdfButton().addActionListener(e -> exportToPDF());
-
-        view.getExcelButton().addActionListener(e -> exportToExcel());
-
-        view.getCsvButton().addActionListener(e -> exportToCSV());
-
-        view.getSearchField().getDocument().addDocumentListener(new DocumentListener() {
-            @Override
-            public void insertUpdate(DocumentEvent e) {
-                filterTable();
-            }
-
-            @Override
-            public void removeUpdate(DocumentEvent e) {
-                filterTable();
-            }
-
-            @Override
-            public void changedUpdate(DocumentEvent e) {
-                filterTable();
-            }
-
-        });
-        filterTable();
     }
 
-    private void createProduct() {
-        createProductDialog.showCreateDialog();
-    }
-
-    private void exportToPDF() {
+    public Product[] searchProducts(String searchTerm) {
         try {
-            view.exportToPDF();
+            return productService.getProductsByName(searchTerm);
         } catch (IOException ex) {
             ex.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Error al consultar los productos: " + ex.getMessage());
+            return null;
         }
     }
 
-    private void exportToExcel() {
-        view.exportToExcel();
-    }
-
-    private void exportToCSV() {
-        view.exportToCSV();
-    }
-
-    private void filterTable() {
-        String searchText = view.getSearchField().getText().toLowerCase().trim();
+    public Product getProductById(int productId) {
         try {
-            Product[] filteredProducts = productService.getProductsByName(searchText);
-            view.updateTable(filteredProducts);
-        } catch (IOException ex) {
+            return productService.getProductById(productId);
+        } catch (IOException ex){
             ex.printStackTrace();
-        }
-    }
-
-    public void refreshTable(Boolean cleanSearch) {
-        if (cleanSearch) {
-            view.setSearchFieldText("");
-        }
-        filterTable();
-    }
-
-    public void editProductById(int productId) {
-        Product productToEdit = null;
-        try {
-            productToEdit = productService.getProductById(productId);
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-        if (productToEdit != null) {
-            editProductDialog.showEditDialog(productToEdit);
+            return null;
         }
     }
 
     public void updateProduct(Product productToUpdate) {
         try {
             productService.updateProduct(productToUpdate.getId(), productToUpdate);
-            refreshTable(false);
-            JOptionPane.showMessageDialog(view, "Producto actualizado con éxito", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(null, "Producto actualizado con éxito", "Éxito", JOptionPane.INFORMATION_MESSAGE);
         } catch (IOException ex) {
             ex.printStackTrace();
-            JOptionPane.showMessageDialog(view, "Error al actualizar el producto: " + ex.getMessage());
+            JOptionPane.showMessageDialog(null, "Error al actualizar el producto: " + ex.getMessage());
         }
     }
 
-    public void storeProduct(Product productToCreate){
-        try{
+    public void storeProduct(Product productToCreate) {
+        try {
             productService.createProduct(productToCreate);
-            refreshTable(false);
-            JOptionPane.showMessageDialog(view, "Producto creado con éxito", "Éxito", JOptionPane.INFORMATION_MESSAGE);
-        }catch (IOException ex){
+            JOptionPane.showMessageDialog(null, "Producto creado con éxito", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+        } catch (IOException ex) {
             ex.printStackTrace();
-            JOptionPane.showMessageDialog(view, "Error al crear el producto: " + ex.getMessage());
+            JOptionPane.showMessageDialog(null, "Error al crear el producto: " + ex.getMessage());
         }
     }
 
     public void deleteProductById(int productId) {
         try {
             productService.deleteProduct(productId);
-            refreshTable(false);
-            JOptionPane.showMessageDialog(view, "Producto eliminado con éxito", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(null, "Producto eliminado con éxito", "Éxito", JOptionPane.INFORMATION_MESSAGE);
         } catch (IOException ex) {
-            JOptionPane.showMessageDialog(view, "Error al eliminar el producto: " + ex.getMessage());
+            JOptionPane.showMessageDialog(null, "Error al eliminar el producto: " + ex.getMessage());
         }
     }
 }

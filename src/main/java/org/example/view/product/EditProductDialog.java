@@ -134,19 +134,18 @@ public class EditProductDialog extends JDialog {
         Category selectedCategory = (Category) categoryComboBox.getSelectedItem();
         int editedCategoryId = selectedCategory.getId();
 
-        Product productToUpdate = new Product();
-
-        productToUpdate.setId(productToEdit.getId());
-        productToUpdate.setName(editedName);
-        productToUpdate.setStock(productToEdit.getStock());
-        productToUpdate.setUnitPrice(editedUnitPrice);
-        productToUpdate.setUnitMeasurement(editedUnitMeasurement);
-        productToUpdate.setCategoryId(editedCategoryId);
 
         if (editedName == null || editedName.isEmpty() || editedUnitPrice < 0) {
             JOptionPane.showMessageDialog(this, "Asegurate de llenar todos los campos correctamente", "Error", JOptionPane.ERROR_MESSAGE);
         } else {
-            setVisible(false);
+            Product productToUpdate = new Product();
+
+            productToUpdate.setId(productToEdit.getId());
+            productToUpdate.setName(editedName);
+            productToUpdate.setStock(productToEdit.getStock());
+            productToUpdate.setUnitPrice(editedUnitPrice);
+            productToUpdate.setUnitMeasurement(editedUnitMeasurement);
+            productToUpdate.setCategoryId(editedCategoryId);
             parentView.controller.updateProduct(productToUpdate);
             dispose();
         }

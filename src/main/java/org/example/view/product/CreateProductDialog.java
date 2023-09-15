@@ -106,19 +106,17 @@ public class CreateProductDialog extends JDialog {
         Category selectedCategory = (Category) categoryComboBox.getSelectedItem();
         int categoryId = selectedCategory.getId();
 
-        Product productToCreate = new Product();
-
-        productToCreate.setId(-1); //Invalid id for the post request
-        productToCreate.setName(name);
-        productToCreate.setStock(0);
-        productToCreate.setUnitPrice(unitPrice);
-        productToCreate.setUnitMeasurement(unitMeasurement);
-        productToCreate.setCategoryId(categoryId);
-
         if (name == null || name.isEmpty() || unitPrice < 0) {
             JOptionPane.showMessageDialog(this, "Asegurate de llenar todos los campos correctamente", "Error", JOptionPane.ERROR_MESSAGE);
         } else {
-            setVisible(false);
+            Product productToCreate = new Product();
+
+            productToCreate.setId(-1); //Invalid id for the post request
+            productToCreate.setName(name);
+            productToCreate.setStock(0);
+            productToCreate.setUnitPrice(unitPrice);
+            productToCreate.setUnitMeasurement(unitMeasurement);
+            productToCreate.setCategoryId(categoryId);
             parentView.controller.storeProduct(productToCreate);
             dispose();
         }

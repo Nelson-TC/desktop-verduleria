@@ -1,11 +1,12 @@
 package org.example.view.product;
 
+import com.formdev.flatlaf.FlatClientProperties;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.apache.poi.xssf.usermodel.XSSFCell;
 import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.example.MainMenu;
+import org.example.view.MainMenu;
 import org.example.controller.ProductController;
 import org.example.model.Product;
 import org.example.themes.Colors;
@@ -17,9 +18,12 @@ import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 
 import com.opencsv.CSVWriter;
+import org.example.utils.renderer.CenterRenderer;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -29,6 +33,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 
 public class ProductView extends JFrame {
+    private final ProductView self = this;
     private JPanel MainPanel;
     private JButton backButton;
     private JTextField searchField;
@@ -37,31 +42,10 @@ public class ProductView extends JFrame {
     private JButton pdfButton;
     private JButton excelButton;
 
-
-    public JTextField getSearchField() {
-        return searchField;
-    }
-    public void setSearchFieldText(String text) {
-        this.searchField.setText(text);
-    }
-
-    public JButton getCreateProductButton() {
-        return createProductButton;
-    }
-
-    public JButton getPdfButton() {
-        return pdfButton;
-    }
-
-    public JButton getExcelButton() {
-        return excelButton;
-    }
-
-    public JButton getCsvButton() {
-        return csvButton;
-    }
-
     private JButton csvButton;
+    private JLabel mainLabel;
+    private JPanel titlePanel;
+    private JScrollPane tablePane;
 
     private final DefaultTableModel tableModel;
 
@@ -69,20 +53,22 @@ public class ProductView extends JFrame {
 
     public ProductView() {
         /* Change the UI text language (spanish) */
-        UIManager.put("FileChooser.openDialogTitleText","Abrir");
-        UIManager.put("FileChooser.lookInLabelText","Ver en:");
-        UIManager.put("FileChooser.fileNameLabelText","Nombre del archivo:");
-        UIManager.put("FileChooser.filesOfTypeLabelText","Archivos de tipo:");
-        UIManager.put("FileChooser.openButtonText","Abrir");
+        UIManager.put("FileChooser.openDialogTitleText", "Abrir");
+        UIManager.put("FileChooser.lookInLabelText", "Ver en:");
+        UIManager.put("FileChooser.fileNameLabelText", "Nombre del archivo:");
+        UIManager.put("FileChooser.filesOfTypeLabelText", "Archivos de tipo:");
+        UIManager.put("FileChooser.openButtonText", "Abrir");
         UIManager.put("FileChooser.cancelButtonText", "Cancelar");
-        UIManager.put("FileChooser.acceptAllFileFilterText","Todos los tipos");
+        UIManager.put("FileChooser.acceptAllFileFilterText", "Todos los tipos");
 
-        UIManager.put("FileChooser.saveDialogTitleText","Guardar como");
-        UIManager.put("FileChooser.saveInLabelText","Guardar en:");
-        UIManager.put("FileChooser.saveButtonText","Guardar");
+        UIManager.put("FileChooser.saveDialogTitleText", "Guardar como");
+        UIManager.put("FileChooser.saveInLabelText", "Guardar en:");
+        UIManager.put("FileChooser.saveButtonText", "Guardar");
 
         UIManager.put("OptionPane.yesButtonText", "Sí");
         UIManager.put("OptionPane.noButtonText", "No");
+
+        this.controller = new ProductController();
 
         /* Style for the create product button */
         createProductButton.setFocusPainted(false);
@@ -104,8 +90,10 @@ public class ProductView extends JFrame {
         Font headerFont = header.getFont();
         Font boldHeaderFont = new Font(headerFont.getFontName(), Font.BOLD, headerFont.getSize());
         header.setFont(boldHeaderFont);
-        header.setBackground(new Colors().green);
+        header.setBackground(new Colors().main);
         header.setForeground(Color.white);
+
+        productTable.setBackground(new Colors().light);
 
         /* Render the edit & delete columns */
         productTable.getColumnModel().getColumn(5).setCellRenderer(new ButtonRenderer("Editar"));
@@ -134,6 +122,41 @@ public class ProductView extends JFrame {
         deleteColumn.setMinWidth(90);
         deleteColumn.setMaxWidth(90);
 
+        createProductButton.addActionListener(e -> {
+            CreateProductDialog createProductDialog = new CreateProductDialog(this);
+            createProductDialog.showCreateDialog();
+        });
+
+        pdfButton.addActionListener(e -> {
+            try {
+                exportToPDF();
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(null, "Error al exportar a PDF: " + ex.getMessage());
+            }
+        });
+
+        excelButton.addActionListener(e -> exportToExcel());
+
+        csvButton.addActionListener(e -> exportToCSV());
+
+        searchField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                filterTable();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                filterTable();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                filterTable();
+            }
+
+        });
+
         productTable.addMouseListener(new MouseAdapter() {
             public void mouseClicked(MouseEvent e) {
                 int row = productTable.rowAtPoint(e.getPoint());
@@ -142,7 +165,10 @@ public class ProductView extends JFrame {
                 if (col == 5 && !isNoResultsRow(row)) { // Edit
                     if (e.getClickCount() == 1) {
                         int productId = (int) productTable.getValueAt(row, 0);
-                        controller.editProductById(productId);
+                        Product productToEdit = controller.getProductById(productId);
+                        EditProductDialog editProductDialog =  new EditProductDialog(self);
+                        editProductDialog.showEditDialog(productToEdit);
+                        filterTable();
                     }
                 } else if (col == 6 && !isNoResultsRow(row)) { // Delete
                     if (e.getClickCount() == 1) {
@@ -154,7 +180,8 @@ public class ProductView extends JFrame {
                                 JOptionPane.YES_NO_OPTION
                         );
                         if (option == JOptionPane.YES_OPTION) {
-                                controller.deleteProductById(productId);
+                            controller.deleteProductById(productId);
+                            filterTable();
                         }
                     }
                 }
@@ -169,26 +196,47 @@ public class ProductView extends JFrame {
         MainPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
 
         setTitle("Productos");
+        MainPanel.setBackground(new Colors().background);
+
         setContentPane(MainPanel);
 
         setDefaultCloseOperation(EXIT_ON_CLOSE);
 
-        int width = (int) (screenWidth * 0.6);
-        int height = (int) (screenHeight * 0.6);
+        int width = (int) (screenWidth * 0.8);
+        int height = (int) (screenHeight * 0.8);
         setSize(width, height);
         setLocationRelativeTo(null);
 
         setVisible(true);
+
+        titlePanel.setBackground(new Colors().light);
+        titlePanel.putClientProperty(FlatClientProperties.STYLE, "arc: 10");
+
+        mainLabel.setForeground(new Colors().main);
+
+        backButton.setBackground(new Colors().main);
+        backButton.setForeground(Color.white);
+
+        pdfButton.setBackground(new Colors().main);
+        pdfButton.setForeground(Color.white);
+
+        excelButton.setBackground(new Colors().main);
+        excelButton.setForeground(Color.white);
+
+        csvButton.setBackground(new Colors().main);
+        csvButton.setForeground(Color.white);
+
         backButton.addActionListener(e -> {
             MainMenu.getInstance().setVisible(true);
             setVisible(false);
         });
-
-        this.controller = new ProductController(this);
+        filterTable();
     }
 
-    public void updateTable(Product[] products) {
+    public void filterTable() {
         tableModel.setRowCount(0);
+        String searchText = searchField.getText().toString().toLowerCase().trim();
+        Product[] products = controller.searchProducts(searchText);
 
         if (products.length == 0) {
             tableModel.addRow(new Object[]{"NA", "No se encontraron resultados", "", "", ""});
@@ -228,11 +276,6 @@ public class ProductView extends JFrame {
         }
     }
 
-    class CenterRenderer extends DefaultTableCellRenderer {
-        public CenterRenderer() {
-            setHorizontalAlignment(SwingConstants.CENTER);
-        }
-    }
 
     private boolean isNoResultsRow(int row) {
         Object idValue = productTable.getValueAt(row, 0);
@@ -392,7 +435,7 @@ public class ProductView extends JFrame {
     }
 
 
-    public void exportToCSV(){
+    public void exportToCSV() {
         try {
             DefaultTableModel model = (DefaultTableModel) productTable.getModel();
             int rowCount = model.getRowCount();
@@ -428,7 +471,7 @@ public class ProductView extends JFrame {
                     e.printStackTrace();
                 }
             }
-        }catch (Exception ex) {
+        } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Error al exportar a CSV: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }

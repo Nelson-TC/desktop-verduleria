@@ -7,28 +7,32 @@ import java.text.ParseException;
 
 public class DoubleFormatterFactory {
     public static DefaultFormatterFactory createDoubleFormatterFactory() {
-        NumberFormat format = NumberFormat.getNumberInstance();
+        NumberFormat format = NumberFormat.getInstance();
+        format.setMinimumFractionDigits(2);
+        format.setMaximumFractionDigits(2);
+        format.setMinimumIntegerDigits(0);
+
         NumberFormatter formatter = new NumberFormatter(format) {
             @Override
             public Object stringToValue(String text) throws ParseException {
-                if (text == null || text.trim().isEmpty()) {
-                    return null; // Tratar campos vacíos como valores nulos
+                if (text == null || text.isEmpty()) {
+                    return 0.0;
                 }
-                // Intentar convertir el texto en un valor Double
                 try {
-                    return super.stringToValue(text);
-                } catch (ParseException e) {
-                    throw new ParseException("Formato inválido", e.getErrorOffset());
+                    double value = Double.parseDouble(text);
+                    if (value < 0.0) {
+                        return 0.0;
+                    }
+                    return value;
+                } catch (NumberFormatException e) {
+                    return 0.0;
                 }
             }
         };
 
         formatter.setValueClass(Double.class);
-        formatter.setMinimum(0.0);
-        formatter.setMaximum(Double.MAX_VALUE);
         formatter.setAllowsInvalid(false);
 
         return new DefaultFormatterFactory(formatter);
     }
 }
-
